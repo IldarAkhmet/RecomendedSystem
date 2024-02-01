@@ -3,6 +3,7 @@ from sqlalchemy.types import Integer, String
 from sqlalchemy import Column
 
 
+# создаем класс для определения типов таблиц в базе данных для работы через алхимию
 class User(Base):
     __tablename__ = 'user'
     __table_args__ = {'schema': 'public'}

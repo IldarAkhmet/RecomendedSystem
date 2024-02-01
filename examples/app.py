@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from schema import PostGet
 import os
+from model import load_models
+from database import Base, engine, SessionLocal
 from catboost import CatBoostClassifier
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -8,43 +10,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.types import Integer, String
 from typing import List
+from tablepost import Post
 from datetime import datetime
 import pandas as pd
+import datetime
 
-
-SQLALCHEMY_DATABASE_URL = "postgresql://robot-startml-ro:pheiph0hahj1Vaif@postgres.lab.karpov.courses:6432/startml"
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_size=10, max_overflow=20)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-class Post(Base):
-    __tablename__ = 'post'
-    __table_args_ = {'schema': 'public'}
-
-    id = Column(Integer, primary_key=True)
-    text = Column(String)
-    topic = Column(String)
 
 def get_db():
     with SessionLocal() as db:
         return db
 
-def get_model_path(path: str) -> str:
-    if os.environ.get("IS_LMS") == "1":  # проверяем где выполняется код в лмс, или локально. Немного магии
-        MODEL_PATH = '/workdir/user_input/model'
-    else:
-        MODEL_PATH = path
-    return MODEL_PATH
-
-
-def load_models():
-    model_path = get_model_path("C:\MyJupyterNotebook\KC_ML\lesson_22\catboost_model3")
-    model = CatBoostClassifier()
-    model.load_model(model_path)  # пример как можно загружать модели
-
-    return model
 
 model = load_models()
 
@@ -58,9 +33,18 @@ posts = pd.read_sql(
         engine
     ).set_index('index')
 
-@app.get('/post/recommendations/', response_model=List[PostGet])
-def recommended_posts(id: int = 200, limit: int = 5, db=Depends(get_db)) -> List[PostGet]:
+### пока в разработке
+# posts = pd.read_sql(
+#     f"""
+#         SELECT *
+#         FROM public.posts_info_features_dl
+#     """,
+#     engine
+# ).set_index('index')
 
+@app.get('/post/recommendations/{id}', response_model=List[PostGet])
+def recommended_posts(id: int = 200, limit: int = 5, db=Depends(get_db)) -> List[PostGet]:
+    # now = datetime.datetime.now()
     user = pd.read_sql(
         f"""
                 SELECT * 
@@ -69,7 +53,22 @@ def recommended_posts(id: int = 200, limit: int = 5, db=Depends(get_db)) -> List
             """,
         engine
     )
+
+    ### пока в разработке
+    # user['hour'] = now.hour
+    # user['month'] = now.month
+
     data = posts.join(user, how='cross')[['age', 'country', 'city', 'exp_group', 'text', 'topic', 'cnt_actions']]
+
+    ### пока в разработке
+    # data = posts.join(user, how='cross')[['hour', 'month', 'gender', 'age', 'country', 'city', 'exp_group', 'os',
+    #    'source', 'topic', 'TextCluster', 'DistanceToCluster_0',
+    #    'DistanceToCluster_1', 'DistanceToCluster_2', 'DistanceToCluster_3',
+    #    'DistanceToCluster_4', 'DistanceToCluster_5', 'DistanceToCluster_6',
+    #    'DistanceToCluster_7', 'DistanceToCluster_8', 'DistanceToCluster_9',
+    #    'DistanceToCluster_10', 'DistanceToCluster_11', 'DistanceToCluster_12',
+    #    'DistanceToCluster_13', 'DistanceToCluster_14']]
+
     data['pred'] = model.predict_proba(data)[:, 1] # переводим наши предсказания в вероятности
 
     data['post_id'] = posts['post_id']

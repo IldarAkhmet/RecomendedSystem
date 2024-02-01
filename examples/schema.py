@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
+### Создание классов для валидации типов( из бд в вид класса )
+
 class UserGet(BaseModel):
     id: int
     age: int

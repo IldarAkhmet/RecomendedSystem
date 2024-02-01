@@ -2,6 +2,8 @@ from database import Base
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.types import Integer, String
 
+
+# создаем класс для определения типов таблиц в базе данных для работы через алхимию
 class Post(Base):
     __tablename__ = 'post'
     __table_args_ = {'schema': 'public'}

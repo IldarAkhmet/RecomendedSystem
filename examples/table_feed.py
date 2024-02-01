@@ -5,6 +5,8 @@ from tablepost import Post
 from tableuser import User
 from sqlalchemy.orm import relationship
 
+
+# создаем класс для определения типов таблиц в базе данных для работы через алхимию
 class Feed(Base):
     __tablename__ = 'feed_action'
     __table_args__ = {'schema': 'public'}
